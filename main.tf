@@ -52,6 +52,5 @@ resource "aws_security_group" "my-security" {
 }
 
 resource "aws_key_pair" "LaptopKey" {
-       public_key = file("~/.ssh/id_rsa.pub")
        key_name = "LaptopKey"
 }
