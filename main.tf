@@ -1,59 +1,48 @@
 provider "aws" {
   region = "us-east-1"
-  access_key = "xxxxxx"
-  secret_key = "yyyyyy"
+  access_key = "xxxxx"
+  secret_key = "xxxxx"
 }
 
-resource "aws_vpc" "my-vpc"{
-      cidr_block = "10.1.0.0/16"
-      enable_dns_hostnames = true
-      enable_dns_support = true
+resource "aws_vpc" "my-vpc" {
+  cidr_block = var.vpc_cidrblock
+  enable_dns_hostnames = var.vpc_Dns_Hostnames
+  enable_dns_support = var.vpc_Dns_support
+  tags = {
+    Name="my-vpc"
+  }
 }
 
 resource "aws_subnet" "subnet-1" {
-      vpc_id = aws_vpc.my-vpc.id
-      cidr_block = "10.1.1.0/24"
-      availability_zone = "us-east-1a"
-      enable_dns64 = true
-      map_public_ip_on_launch = true
+  vpc_id                  = aws_vpc.my-vpc.id
+  cidr_block              = var.subnet_cidrblock
+  availability_zone       = var.subnet_avaibilityzone
+  map_public_ip_on_launch = var.subnet_mappubliciponlaunch
+  tags = {
+    Name="subnet-1"
+  }
 }
 
-resource "aws_internet_gateway" "my-igw" {
-      vpc_id = aws_vpc.my-vpc.id
+resource "aws_dynamodb_table" "terraform-lock" {
+    name           = "terraform_state"
+    read_capacity  = 5
+    write_capacity = 5
+    hash_key       = "LockID"
+    attribute {
+        name = "LockID"
+        type = "S"
+    }
+    tags = {
+        "Name" = "DynamoDB Terraform State Lock Table"
+    }
 }
 
-resource "aws_route_table" "my-route" {
-      vpc_id = aws_vpc.my-vpc.id
-
-      route{
-        cidr_block = "0.0.0.0/0"
-        gateway_id = aws_internet_gateway.my-igw.id
-      }
-}
-
-resource "aws_route_table_association" "subnet association" {
-    subnet_id = aws_subnet.subnet-1.id
-    route_table_id = aws_route_table.my-route.id
-}
-
-resource "aws_security_group" "my-security" {
-      vpc_id = aws_vpc.my-vpc.id
-      
-      ingress{
-        from_port = 0
-        to_port = 0
-        protocol = "-1"
-        cidr_blocks = "[0.0.0.0/0]"
-      }
-      egress{
-        from_port = 0
-        to_port = 0
-        protocol = "-1"
-        cidr_blocks = "[0.0.0.0/0]"
-      }
-}
-
-resource "aws_key_pair" "LaptopKey" {
-       key_name = "LaptopKey"
-       public_key = file("xxxxxx")
+terraform {
+  backend "s3" {
+    encrypt = true
+    dynamodb_table = "terraform_state"
+    bucket = "mymanjunadhabucket"
+    key = "terraform.tfstate"
+    region = "us-east-1"
+  }
 }
